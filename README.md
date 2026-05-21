@@ -177,17 +177,502 @@ https://engineeringxpert.com/wp-content/uploads/2022/04/26.png
 
 ![image](https://user-images.githubusercontent.com/36288975/233856904-99eb708a-c907-4595-9025-c9dbd89b8879.png)
 
-## CIRCUIT DIAGRAM 
- 
-
 ## STM 32 CUBE PROGRAM :
+```
+main.c
+
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Keypad and LCD Program
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "lcd.h"
+#include <stdbool.h>
+
+/* Private variables ---------------------------------------------------------*/
+bool col1, col2, col3, col4;
+
+/* LCD Object */
+Lcd_HandleTypeDef lcd;
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+void key(void);
+
+/**
+  * @brief  Main program
+  * @retval int
+  */
+int main(void)
+{
+  HAL_Init();
+
+  SystemClock_Config();
+
+  MX_GPIO_Init();
+
+  /* LCD Initialization */
+  Lcd_PortType ports[] = {GPIOA, GPIOA, GPIOA, GPIOA};
+  Lcd_PinType pins[] = {GPIO_PIN_3, GPIO_PIN_2, GPIO_PIN_1, GPIO_PIN_0};
+
+  lcd = Lcd_create(ports, pins,
+                   GPIOB, GPIO_PIN_0,
+                   GPIOB, GPIO_PIN_1,
+                   LCD_4_BIT_MODE);
+
+  Lcd_clear(&lcd);
+
+  while (1)
+  {
+      key();
+  }
+}
+
+/* Keypad Function */
+void key(void)
+{
+    /* Activate Row 1 */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_2, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_SET);
+
+    /* Read Columns */
+    col1 = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_4);
+    col2 = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_5);
+    col3 = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6);
+    col4 = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7);
+
+    if(!col1)
+    {
+        Lcd_clear(&lcd);
+        Lcd_cursor(&lcd, 0, 0);
+        Lcd_string(&lcd, "KEY 1");
+    }
+
+    if(!col2)
+    {
+        Lcd_clear(&lcd);
+        Lcd_cursor(&lcd, 0, 0);
+        Lcd_string(&lcd, "KEY 2");
+    }
+
+    if(!col3)
+    {
+        Lcd_clear(&lcd);
+        Lcd_cursor(&lcd, 0, 0);
+        Lcd_string(&lcd, "KEY 3");
+    }
+
+    if(!col4)
+    {
+        Lcd_clear(&lcd);
+        Lcd_cursor(&lcd, 0, 0);
+        Lcd_string(&lcd, "KEY A");
+    }
+
+    HAL_Delay(300);
+}
+
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
+
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK |
+                                RCC_CLOCKTYPE_SYSCLK |
+                                RCC_CLOCKTYPE_PCLK1 |
+                                RCC_CLOCKTYPE_PCLK2;
+
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief GPIO Initialization
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* GPIO Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /* Configure ROW Pins PC0-PC3 as OUTPUT */
+  HAL_GPIO_WritePin(GPIOC,
+                    GPIO_PIN_0 | GPIO_PIN_1 |
+                    GPIO_PIN_2 | GPIO_PIN_3,
+                    GPIO_PIN_SET);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_0 |
+                        GPIO_PIN_1 |
+                        GPIO_PIN_2 |
+                        GPIO_PIN_3;
+
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /* Configure COLUMN Pins PC4-PC7 as INPUT PULLUP */
+  GPIO_InitStruct.Pin = GPIO_PIN_4 |
+                        GPIO_PIN_5 |
+                        GPIO_PIN_6 |
+                        GPIO_PIN_7;
+
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /* Configure LCD DATA Pins PA0-PA3 as OUTPUT */
+  GPIO_InitStruct.Pin = GPIO_PIN_0 |
+                        GPIO_PIN_1 |
+                        GPIO_PIN_2 |
+                        GPIO_PIN_3;
+
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* Configure LCD Control Pins PB0 & PB1 as OUTPUT */
+  GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+/**
+  * @brief Error Handler
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  __disable_irq();
+
+  while (1)
+  {
+  }
+}
+```
+
+```
+lcd.c
+// *  Created on: 10/04/2023
+ //
+
+#include "lcd.h"
+const uint8_t ROW_16[] = {0x00, 0x40, 0x10, 0x50};
+const uint8_t ROW_20[] = {0x00, 0x40, 0x14, 0x54};
+/************************************** Static declarations **************************************/
+
+static void lcd_write_data(Lcd_HandleTypeDef * lcd, uint8_t data);
+static void lcd_write_command(Lcd_HandleTypeDef * lcd, uint8_t command);
+static void lcd_write(Lcd_HandleTypeDef * lcd, uint8_t data, uint8_t len);
 
 
+/************************************** Function definitions **************************************/
 
+/**
+ * Create new Lcd_HandleTypeDef and initialize the Lcd
+ */
+Lcd_HandleTypeDef Lcd_create(
+		Lcd_PortType port[], Lcd_PinType pin[],
+		Lcd_PortType rs_port, Lcd_PinType rs_pin,
+		Lcd_PortType en_port, Lcd_PinType en_pin, Lcd_ModeTypeDef mode)
+{
+	Lcd_HandleTypeDef lcd;
+
+	lcd.mode = mode;
+
+	lcd.en_pin = en_pin;
+	lcd.en_port = en_port;
+
+	lcd.rs_pin = rs_pin;
+	lcd.rs_port = rs_port;
+
+	lcd.data_pin = pin;
+	lcd.data_port = port;
+
+	Lcd_init(&lcd);
+
+	return lcd;
+}
+
+/**
+ * Initialize 16x2-lcd without cursor
+ */
+void Lcd_init(Lcd_HandleTypeDef * lcd)
+{
+	if(lcd->mode == LCD_4_BIT_MODE)
+	{
+			lcd_write_command(lcd, 0x33);
+			lcd_write_command(lcd, 0x32);
+			lcd_write_command(lcd, FUNCTION_SET | OPT_N);				// 4-bit mode
+	}
+	else
+		lcd_write_command(lcd, FUNCTION_SET | OPT_DL | OPT_N);
+
+
+	lcd_write_command(lcd, CLEAR_DISPLAY);						// Clear screen
+	lcd_write_command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D);		// Lcd-on, cursor-off, no-blink
+	lcd_write_command(lcd, ENTRY_MODE_SET | OPT_INC);			// Increment cursor
+}
+
+/**
+ * Write a number on the current position
+ */
+void Lcd_int(Lcd_HandleTypeDef * lcd, int number)
+{
+	char buffer[11];
+	sprintf(buffer, "%d", number);
+
+	Lcd_string(lcd, buffer);
+}
+
+/**
+ * Write a string on the current position
+ */
+void Lcd_string(Lcd_HandleTypeDef * lcd, char * string)
+{
+	for(uint8_t i = 0; i < strlen(string); i++)
+	{
+		lcd_write_data(lcd, string[i]);
+	}
+}
+
+/**
+ * Set the cursor position
+ */
+void Lcd_cursor(Lcd_HandleTypeDef * lcd, uint8_t row, uint8_t col)
+{
+	#ifdef LCD20xN
+	lcd_write_command(lcd, SET_DDRAM_ADDR + ROW_20[row] + col);
+	#endif
+
+	#ifdef LCD16xN
+	lcd_write_command(lcd, SET_DDRAM_ADDR + ROW_16[row] + col);
+	#endif
+}
+
+/**
+ * Clear the screen
+ */
+void Lcd_clear(Lcd_HandleTypeDef * lcd) {
+	lcd_write_command(lcd, CLEAR_DISPLAY);
+}
+
+void Lcd_define_char(Lcd_HandleTypeDef * lcd, uint8_t code, uint8_t bitmap[]){
+	lcd_write_command(lcd, SETCGRAM_ADDR + (code << 3));
+	for(uint8_t i=0;i<8;++i){
+		lcd_write_data(lcd, bitmap[i]);
+	}
+
+}
+
+
+/************************************** Static function definition **************************************/
+
+/**
+ * Write a byte to the command register
+ */
+void lcd_write_command(Lcd_HandleTypeDef * lcd, uint8_t command)
+{
+	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_COMMAND_REG);		// Write to command register
+
+	if(lcd->mode == LCD_4_BIT_MODE)
+	{
+		lcd_write(lcd, (command >> 4), LCD_NIB);
+		lcd_write(lcd, command & 0x0F, LCD_NIB);
+	}
+	else
+	{
+		lcd_write(lcd, command, LCD_BYTE);
+	}
+
+}
+
+/**
+ * Write a byte to the data register
+ */
+void lcd_write_data(Lcd_HandleTypeDef * lcd, uint8_t data)
+{
+	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_DATA_REG);			// Write to data register
+
+	if(lcd->mode == LCD_4_BIT_MODE)
+	{
+		lcd_write(lcd, data >> 4, LCD_NIB);
+		lcd_write(lcd, data & 0x0F, LCD_NIB);
+	}
+	else
+	{
+		lcd_write(lcd, data, LCD_BYTE);
+	}
+
+}
+
+/**
+ * Set len bits on the bus and toggle the enable line
+ */
+void lcd_write(Lcd_HandleTypeDef * lcd, uint8_t data, uint8_t len)
+{
+	for(uint8_t i = 0; i < len; i++)
+	{
+		HAL_GPIO_WritePin(lcd->data_port[i], lcd->data_pin[i], (data >> i) & 0x01);
+	}
+
+	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 1);
+	DELAY(1);
+	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 0);
+}
+
+```
+
+```
+lcd.h
+
+/*
+ * lcd.h
+ *
+ *  Created on: 10/04/2023
+ *      Author: VASANTH KUMAR.CH
+ */
+
+#ifndef LCD_H_
+#define LCD_H_
+
+#include "stm32f4xx_hal.h"
+#include "string.h"
+#include "stdio.h"
+#include "main.h"
+
+// #define LCD20xN 		// For 20xN LCDs
+#define LCD16xN			// For 16xN LCDs
+
+// For row start addresses
+extern const uint8_t ROW_16[];
+extern const uint8_t ROW_20[];
+
+/************************************** Command register **************************************/
+#define CLEAR_DISPLAY 0x01
+
+#define RETURN_HOME 0x02
+
+#define ENTRY_MODE_SET 0x04
+#define OPT_S	0x01					// Shift entire display to right
+#define OPT_INC 0x02					// Cursor increment
+
+#define DISPLAY_ON_OFF_CONTROL 0x08
+#define OPT_D	0x04					// Turn on display
+#define OPT_C	0x02					// Turn on cursor
+#define OPT_B 	0x01					// Turn on cursor blink
+
+#define CURSOR_DISPLAY_SHIFT 0x10		// Move and shift cursor
+#define OPT_SC 0x08
+#define OPT_RL 0x04
+
+#define FUNCTION_SET 0x20
+#define OPT_DL 0x10						// Set interface data length
+#define OPT_N 0x08						// Set number of display lines
+#define OPT_F 0x04						// Set alternate font
+#define SETCGRAM_ADDR 0x040
+#define SET_DDRAM_ADDR 0x80				// Set DDRAM address
+
+
+/************************************** Helper macros **************************************/
+#define DELAY(X) HAL_Delay(X)
+
+
+/************************************** LCD defines **************************************/
+#define LCD_NIB 4
+#define LCD_BYTE 8
+#define LCD_DATA_REG 1
+#define LCD_COMMAND_REG 0
+
+
+/************************************** LCD typedefs **************************************/
+#define Lcd_PortType GPIO_TypeDef*
+#define Lcd_PinType uint16_t
+
+typedef enum {
+	LCD_4_BIT_MODE,
+	LCD_8_BIT_MODE
+} Lcd_ModeTypeDef;
+
+
+typedef struct {
+	Lcd_PortType * data_port;
+	Lcd_PinType * data_pin;
+
+	Lcd_PortType rs_port;
+	Lcd_PinType rs_pin;
+
+	Lcd_PortType en_port;
+	Lcd_PinType en_pin;
+
+	Lcd_ModeTypeDef mode;
+
+} Lcd_HandleTypeDef;
+
+
+/************************************** Public functions **************************************/
+void Lcd_init(Lcd_HandleTypeDef * lcd);
+void Lcd_int(Lcd_HandleTypeDef * lcd, int number);
+void Lcd_string(Lcd_HandleTypeDef * lcd, char * string);
+void Lcd_cursor(Lcd_HandleTypeDef * lcd, uint8_t row, uint8_t col);
+Lcd_HandleTypeDef Lcd_create(
+		Lcd_PortType port[], Lcd_PinType pin[],
+		Lcd_PortType rs_port, Lcd_PinType rs_pin,
+		Lcd_PortType en_port, Lcd_PinType en_pin, Lcd_ModeTypeDef mode);
+void Lcd_define_char(Lcd_HandleTypeDef * lcd, uint8_t code, uint8_t bitmap[]);
+void Lcd_clear(Lcd_HandleTypeDef * lcd);
+
+#endif /* LCD_H_ */
+```
 ## Output screen shots of proteus  :
- 
- 
- ## CIRCUIT DIAGRAM (EXPORT THE GRAPHICS TO PDF AND ADD THE SCREEN SHOT HERE): 
+ <img width="1920" height="1080" alt="pmc5 1" src="https://github.com/user-attachments/assets/d8735ea7-cbf4-4c4d-a7bd-1a2ef38d8be6" />
+<img width="1920" height="1080" alt="pmc5 2" src="https://github.com/user-attachments/assets/d34f19f6-c57f-435c-ba93-58fb4cbee044" />
+
  
  
 ## Result :
